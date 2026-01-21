@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/png" href="https://files.catbox.moe/1gdhs0.png">
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+body { 
+    background-image: url('https://wallpapercave.com/wp/wp1854233.jpg');
+    background-attachment: fixed; 
+    background-position: center;
+    background-size: cover;
+    background-color: #000; /* Fallback color */
+    margin: 0; 
+    padding: 0; 
+}
+
+.main-wrapper {
+    background: #111;
+    width: 100%;
+    max-width: 900px; 
+    margin: 0 auto;
+    min-height: 100vh;
+    padding: 40px 20px;
+    box-shadow: 0 0 100px rgba(0,0,0,1);
+    box-sizing: border-box;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* Ensure the spinner doesn't break out */
+#spinner-container { 
+    width: 700px; 
+    height: 150px; 
+    margin: 20px 0; /* Changed 'auto' to '0' since parent handles centering */
+    overflow: hidden; 
+    position: relative; 
+    border: 2px solid #333; 
+    background: #000; 
+    border-radius: 4px; 
+}
+
+#marker { 
+    position: absolute; 
+    left: 50%;
+    transform: translateX(-50%);
+    top: 135px; /* Adjust this to sit perfectly on your reel */
+    width: 205px; 
+    height: 205px; 
+    background: url('https://files.catbox.moe/o39zae.png') no-repeat center;
+    background-size: contain;
+    z-index: 100; 
+    pointer-events: none;
+    opacity: 0.6;
+}
+
+h2 {
+    font-size: 30px; 
+    text-transform: uppercase;
+    color: #FFFFFF;
+    margin: 30px 0;
+    font-family: 'Arial Black', sans-serif;
+    text-align: center; 
+    text-shadow: 
+        0 1px 0 #ccc,
+        0 2px 0 #c5c5c5,
+        0 3px 0 #bbb;
+    letter-spacing: 2px;
+    font-weight: bold;
+    display: block;
+    width: 100%;
+}
+
+	#reel { display: flex; transform: translateX(0); will-change: transform; align-items: center; height: 100%; }
+
+/* Base Item Styles */
+.item, .inv-slot { 
+    position: relative; 
+    overflow: hidden; 
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    justify-content: center;
+    box-sizing: border-box;
+	background: #1a1a1a; /* Dark background so the transparency shows */
+}
+
+/* Ensure image is BELOW the gradient */
+.item img, .inv-slot img { 
+    width: 90px; 
+    height: 90px; 
+    object-fit: contain; 
+    position: relative; 
+    z-index: 1; 
+}
+
+.item { min-width: 140px; height: 140px; border-right: 1px solid #222; font-size: 11px; padding: 5px; }
+.item img { width: 90px; height: 90px; object-fit: contain; position: relative; z-index: 1; }
+.item span { position: relative; z-index: 2; font-weight: bold; text-shadow: 1px 1px 2px black; margin-top: 5px; }
+
+/* Inventory Styles */
+#inventory { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; max-width: 700px; margin: 30px auto; }
+.inv-slot { width: 100%; aspect-ratio: 1; border: 1px solid #333; background: #1a1a1a; border-radius: 4px; }
+.inv-slot img { width: 85%; height: auto; position: relative; z-index: 1; }
+
+/* The Gradient Overlay - NOW OVER THE IMAGE */
+.item::after, .inv-slot::after {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    pointer-events: none;
+    z-index: 2; /* Higher than the image */
+    opacity: 0.2; /* Controls how much the image is 'tinted' */
+}
+
+/* Rarity Colors */
+.rare::after { background: linear-gradient(to top, #4b69ff, transparent); }
+.very-rare::after { background: linear-gradient(to top, #7000CC, transparent); }
+.import::after { background: linear-gradient(to top, #CC0000, transparent); }
+.exotic::after { background: linear-gradient(to top, #FFE100, transparent); }
+.black-market::after { background: linear-gradient(to top, #CC00AA, transparent); }
+
+/* Keep text on very top */
+.item span {
+    position: relative;
+    z-index: 3;
+    font-weight: bold;
+    text-shadow: 2px 2px 4px #000;
+}
+
+/* Hover Effect */
+.inv-slot:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.2);
+    border-color: #fff;
+    transition: all 0.2s ease;
+}
+
+/* Painted Outline Style */
+.painted-outline {
+    outline: 3px solid var(--paint-color);
+    outline-offset: -3px;
+    box-shadow: inset 0 0 15px var(--paint-color), 0 0 15px var(--paint-color);
+}
+
+/* Floating animation - Only for reveal card */
+@keyframes float {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+    100% { transform: translateY(0px); }
+}
+
+/* Updated Selector: Targets only the image inside the reveal card */
+#reveal-card.black-market img {
+    animation: float 3s ease-in-out infinite;
+}
+
+/* Shine Animation */
+@keyframes shine {
+    0% { left: -150%; }
+    25% { left: 150%; }
+    100% { left: 150%; }
+}
+
+/* The light streak */
+#reveal-card.black-market::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -150%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        to right, 
+        transparent, 
+        rgba(255, 255, 255, 0.4), 
+        transparent
+    );
+    transform: skewX(-25deg);
+    z-index: 4; 
+    animation: shine 4s infinite;
+}
+
+#inv-header {
+    color: #FFFFFF;
+    font-size: 20px;
+    margin-top: 40px;
+	font-family: 'Arial', sans-serif;
+    text-transform: uppercase;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+/* Ensures the tracker is also bright */
+#percentile-tracker {
+    color: #aaaaaa; /* Slightly dimmed so the title pops more */
+    font-size: 14px;
+    margin-bottom: 20px;
+}
+
+/* Buttons */
+button { 
+    padding: 12px 40px; 
+    font-weight: bold; 
+    background-color: #28a745; /* Base color */
+    /* This gradient adds the 3D look */
+    background-image: linear-gradient(to bottom, rgba(255,255,255,0.15) 0%, rgba(0,0,0,0.1) 100%);
+    border: 1px solid rgba(0,0,0,0.2); 
+    border-bottom: 3px solid rgba(0,0,0,0.4); /* Darker bottom edge for thickness */
+    color: white; 
+    cursor: pointer; 
+    border-radius: 6px; 
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all 0.1s ease;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+
+
+/* Hover effect: makes the button glow slightly */
+button:hover:not(:disabled) {
+    filter: brightness(1.1);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+}
+
+/* Click effect: makes the button physically "push down" */
+button:active:not(:disabled) {
+    transform: translateY(2px);
+    border-bottom-width: 1px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+button:disabled { 
+    background-color: #444; 
+    background-image: none;
+    border-bottom-color: #333;
+    cursor: not-allowed; 
+    opacity: 0.6;
+}</style>
+</head>
+
+<body>
+	<div id="marker"></div> 
+
+    <div class="main-wrapper">
+        <h2>Rocket League Drop Opening</h2>
+	<div id="spinner-container">
+		<div id="reel"></div>
+	</div>
+    
+    <button id="spinBtn" onclick="spin()">OPEN DROP</button>
+
+    <div id="reveal-screen" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:1000; flex-direction:column; align-items:center; justify-content:center;">
+    
+    <div style="height: 450px; display: flex; align-items: center; justify-content: center;">
+        <div id="reveal-card" class="item" style="width:300px; height:400px; transform:scale(1.5); border:none;">
+            </div>
+    </div>
+
+    <div id="reveal-actions" style="margin-top: 50px; display: flex; gap: 20px; position: relative; z-index: 1001;">
+        </div>
+	</div>
+
+    <h3 id="inv-header">Inventory (0 Items)</h3>
+    <div id="percentile-tracker" style="font-size: 12px; color: #fff; margin-bottom: 10px;"></div>
+    <div id="inventory"></div>
+	<div style="font-size: 11px; color: #555; margin-top: 50px; padding-bottom: 20px; text-align: center; max-width: 600px; margin-left: auto; margin-right: auto;">
+		This is a fan made project created by Fladamax.<br><br> 
+		Portions of the materials used are trademarks and/or copyrighted works of Epic Games, Inc. All rights reserved by Epic. This material is not official and is not endorsed by Epic.<br><br>
+		Copyright © 2026 Fladamax. All rights reserved.
+	</div>
+	
+
+<script>
+    const rarityIcons = {
+        "rare": "https://static.wikia.nocookie.net/rocketleague/images/9/99/Uncommon_Drop_icon.png/revision/latest?cb=20250821234904",
+        "very-rare": "https://static.wikia.nocookie.net/rocketleague/images/9/9c/Very_Rare_Drop_icon.png/revision/latest?cb=20250821235117",
+        "import": "https://static.wikia.nocookie.net/rocketleague/images/3/39/Import_Drop_icon.png/revision/latest?cb=20250821235218",
+        "exotic": "https://static.wikia.nocookie.net/rocketleague/images/8/87/Exotic_Drop_icon.png/revision/latest?cb=20250821235307",
+        "black-market": "https://static.wikia.nocookie.net/rocketleague/images/4/44/Black_Market_Drop_icon.png/revision/latest?cb=20250821235355"
+    };
+
+const loot = [
+				{ 
+            name: "Narwhal", 
+            rarity: "rare", 
+            img: "https://rocket-league.com/content/media/items/avatar/220px/a227fb283b1473421076.png",
+			},
+				{ 
+            name: "Athena", 
+            rarity: "rare", 
+            img: "https://rocket-league.com/content/media/items/avatar/220px/0bbabceb031518049871.png",
+			},
+				{ 
+            name: "Dragon Lord", 
+            rarity: "rare", 
+            img: "https://rocket-league.com/content/media/items/avatar/220px/8b78ee0c341637913571.png",
+			},
+				{ 
+            name: "Pollo Caliente", 
+            rarity: "rare", 
+            img: "https://rocket-league.com/content/media/items/avatar/220px/d79c3e448d1473420435.png",},
+				{ 
+            name: "Mondo", 
+            rarity: "rare", 
+            img: "https://rocket-league.com/content/media/items/avatar/220px/19629443d41475684183.png",
+			},
+				{ 
+            name: "Lone Wolf", 
+            rarity: "rare", 
+            img: "https://rocket-league.com/content/media/items/avatar/220px/51dfa9513b1499315194.png",
+			variants: [
+                { color: "Titanium White", img: "https://rocket-league.com/content/media/items/avatar/220px/51dfa9513b1499315194.png" }, // Add real URLs here
+                { color: "Crimson", img: "https://rocket-league.com/content/media/items/avatar/220px/51dfa9513b1499315194.png" },
+                { color: "Sky Blue", img: "https://rocket-league.com/content/media/items/avatar/220px/51dfa9513b1499315194.png" },
+				{ color: "Black", img: "https://rocket-league.com/content/media/items/avatar/220px/51dfa9513b1499315194.png" },
+				{ color: "Grey", img: "https://rocket-league.com/content/media/items/avatar/220px/51dfa9513b1499315194.png" },
+				{ color: "Pink", img: "https://rocket-league.com/content/media/items/avatar/220px/51dfa9513b1499315194.png" },
+				{ color: "Cobalt", img: "https://rocket-league.com/content/media/items/avatar/220px/51dfa9513b1499315194.png" },
+				{ color: "Burnt Sienna", img: "https://rocket-league.com/content/media/items/avatar/220px/51dfa9513b1499315194.png" },
+				{ color: "Saffron", img: "https://rocket-league.com/content/media/items/avatar/220px/51dfa9513b1499315194.png" },
+				{ color: "Lime", img: "https://rocket-league.com/content/media/items/avatar/220px/51dfa9513b1499315194.png" },
+				{ color: "Forest Green", img: "https://rocket-league.com/content/media/items/avatar/220px/51dfa9513b1499315194.png" },
+				{ color: "Orange", img: "https://rocket-league.com/content/media/items/avatar/220px/51dfa9513b1499315194.png" },
+				{ color: "Purple", img: "https://rocket-league.com/content/media/items/avatar/220px/51dfa9513b1499315194.png" }
+            ]
+        },
+				{ 
+            name: "Suji", 
+            rarity: "rare", 
+            img: "https://rocket-league.com/content/media/items/avatar/220px/a6ecd80bcd1490228110.png",
+			variants: [
+                { color: "Titanium White", img: "https://rocket-league.com/content/media/items/avatar/220px/a6ecd80bcd1490228110.png" }, // Add real URLs here
+                { color: "Crimson", img: "https://rocket-league.com/content/media/items/avatar/220px/a6ecd80bcd1490228110.png" },
+                { color: "Sky Blue", img: "https://rocket-league.com/content/media/items/avatar/220px/a6ecd80bcd1490228110.png" },
+				{ color: "Black", img: "https://rocket-league.com/content/media/items/avatar/220px/a6ecd80bcd1490228110.png" },
+				{ color: "Grey", img: "https://rocket-league.com/content/media/items/avatar/220px/a6ecd80bcd1490228110.png" },
+				{ color: "Pink", img: "https://rocket-league.com/content/media/items/avatar/220px/a6ecd80bcd1490228110.png" },
+				{ color: "Cobalt", img: "https://rocket-league.com/content/media/items/avatar/220px/a6ecd80bcd1490228110.png" },
+				{ color: "Burnt Sienna", img: "https://rocket-league.com/content/media/items/avatar/220px/a6ecd80bcd1490228110.png" },
+				{ color: "Saffron", img: "https://rocket-league.com/content/media/items/avatar/220px/a6ecd80bcd1490228110.png" },
+				{ color: "Lime", img: "https://rocket-league.com/content/media/items/avatar/220px/a6ecd80bcd1490228110.png" },
+				{ color: "Forest Green", img: "https://rocket-league.com/content/media/items/avatar/220px/a6ecd80bcd1490228110.png" },
+				{ color: "Orange", img: "https://rocket-league.com/content/media/items/avatar/220px/a6ecd80bcd1490228110.png" },
+				{ color: "Purple", img: "https://rocket-league.com/content/media/items/avatar/220px/a6ecd80bcd1490228110.png" }
+            ]
+        },
+				{ 
+            name: "Mdga", 
+            rarity: "rare", 
+            img: "https://rocket-league.com/content/media/items/avatar/220px/c0a8dcf9381494500392.png",
+			variants: [
+                { color: "Titanium White", img: "https://rocket-league.com/content/media/items/avatar/220px/c0a8dcf9381494500392.png" }, // Add real URLs here
+                { color: "Crimson", img: "https://rocket-league.com/content/media/items/avatar/220px/c0a8dcf9381494500392.png" },
+                { color: "Sky Blue", img: "https://rocket-league.com/content/media/items/avatar/220px/c0a8dcf9381494500392.png" },
+				{ color: "Black", img: "https://rocket-league.com/content/media/items/avatar/220px/c0a8dcf9381494500392.png" },
+				{ color: "Grey", img: "https://rocket-league.com/content/media/items/avatar/220px/c0a8dcf9381494500392.png" },
+				{ color: "Pink", img: "https://rocket-league.com/content/media/items/avatar/220px/c0a8dcf9381494500392.png" },
+				{ color: "Cobalt", img: "https://rocket-league.com/content/media/items/avatar/220px/c0a8dcf9381494500392.png" },
+				{ color: "Burnt Sienna", img: "https://rocket-league.com/content/media/items/avatar/220px/c0a8dcf9381494500392.png" },
+				{ color: "Saffron", img: "https://rocket-league.com/content/media/items/avatar/220px/c0a8dcf9381494500392.png" },
+				{ color: "Lime", img: "https://rocket-league.com/content/media/items/avatar/220px/c0a8dcf9381494500392.png" },
+				{ color: "Forest Green", img: "https://rocket-league.com/content/media/items/avatar/220px/c0a8dcf9381494500392.png" },
+				{ color: "Orange", img: "https://rocket-league.com/content/media/items/avatar/220px/c0a8dcf9381494500392.png" },
+				{ color: "Purple", img: "https://rocket-league.com/content/media/items/avatar/220px/c0a8dcf9381494500392.png" }
+            ]
+        },
+		{ 
+            name: "RLHP", 
+            rarity: "rare", 
+            img: "https://rocket-league.com/content/media/items/avatar/220px/34de99d7661600438175.png",
+            variants: [
+                { color: "Titanium White", img: "https://rocket-league.com/content/media/items/avatar/220px/rlhp/rlhp-TitaniumWhite.png" }, // Add real URLs here
+                { color: "Crimson", img: "https://rocket-league.com/content/media/items/avatar/220px/rlhp/rlhp-Crimson.png" },
+                { color: "Sky Blue", img: "https://rocket-league.com/content/media/items/avatar/220px/rlhp/rlhp-SkyBlue.png" },
+				{ color: "Black", img: "https://rocket-league.com/content/media/items/avatar/220px/rlhp/rlhp-Black.png" },
+				{ color: "Grey", img: "https://rocket-league.com/content/media/items/avatar/220px/rlhp/rlhp-Grey.png" },
+				{ color: "Pink", img: "https://rocket-league.com/content/media/items/avatar/220px/rlhp/rlhp-Pink.png" },
+				{ color: "Cobalt", img: "https://rocket-league.com/content/media/items/avatar/220px/rlhp/rlhp-Cobalt.png" },
+				{ color: "Burnt Sienna", img: "https://rocket-league.com/content/media/items/avatar/220px/rlhp/rlhp-BurntSienna.png" },
+				{ color: "Saffron", img: "https://rocket-league.com/content/media/items/avatar/220px/rlhp/rlhp-Saffron.png" },
+				{ color: "Lime", img: "https://rocket-league.com/content/media/items/avatar/220px/rlhp/rlhp-Lime.png" },
+				{ color: "Forest Green", img: "https://rocket-league.com/content/media/items/avatar/220px/rlhp/rlhp-ForestGreen.png" },
+				{ color: "Orange", img: "https://rocket-league.com/content/media/items/avatar/220px/rlhp/rlhp-Orange.png" },
+				{ color: "Purple", img: "https://rocket-league.com/content/media/items/avatar/220px/rlhp/rlhp-Purple.png" }
+            ]
+        },
+				{ 
+            name: "Hexphase", 
+            rarity: "very-rare", 
+            img: "https://rocket-league.com/content/media/items/avatar/220px/625e9476901494498554.png",
+			variants: [
+                { color: "Titanium White", img: "https://rocket-league.com/content/media/items/avatar/220px/625e9476901494498554.png" }, // Add real URLs here
+                { color: "Crimson", img: "https://rocket-league.com/content/media/items/avatar/220px/625e9476901494498554.png" },
+                { color: "Sky Blue", img: "https://rocket-league.com/content/media/items/avatar/220px/625e9476901494498554.png" },
+				{ color: "Black", img: "https://rocket-league.com/content/media/items/avatar/220px/625e9476901494498554.png" },
+				{ color: "Grey", img: "https://rocket-league.com/content/media/items/avatar/220px/625e9476901494498554.png" },
+				{ color: "Pink", img: "https://rocket-league.com/content/media/items/avatar/220px/625e9476901494498554.png" },
+				{ color: "Cobalt", img: "https://rocket-league.com/content/media/items/avatar/220px/625e9476901494498554.png" },
+				{ color: "Burnt Sienna", img: "https://rocket-league.com/content/media/items/avatar/220px/625e9476901494498554.png" },
+				{ color: "Saffron", img: "https://rocket-league.com/content/media/items/avatar/220px/625e9476901494498554.png" },
+				{ color: "Lime", img: "https://rocket-league.com/content/media/items/avatar/220px/625e9476901494498554.png" },
+				{ color: "Forest Green", img: "https://rocket-league.com/content/media/items/avatar/220px/625e9476901494498554.png" },
+				{ color: "Orange", img: "https://rocket-league.com/content/media/items/avatar/220px/625e9476901494498554.png" },
+				{ color: "Purple", img: "https://rocket-league.com/content/media/items/avatar/220px/625e9476901494498554.png" }
+            ]
+        },
+		{ 
+            name: "Kilowatt", 
+            rarity: "very-rare", 
+            img: "https://rocket-league.com/content/media/items/avatar/220px/c13df29d571481303117.png",
+        },
+		{ 
+            name: "Snakeskin", 
+            rarity: "very-rare", 
+            img: "https://rocket-league.com/content/media/items/avatar/220px/b1b96580d41473420476.png",
+        },
+		{ 
+            name: "Huntress", 
+            rarity: "very-rare", 
+            img: "https://rocket-league.com/content/media/items/avatar/220px/556e16941f1628023515.png",
+        },
+		{ 
+            name: "Vector", 
+            rarity: "very-rare", 
+            img: "https://rocket-league.com/content/media/items/avatar/220px/1eb109f3051646818065.png",
+        },
+		{ 
+            name: "Spiralis", 
+            rarity: "very-rare", 
+            img: "https://rocket-league.com/content/media/items/avatar/220px/a30363bbcd1481306565.png",
+            variants: [
+                { color: "Titanium White", img: "https://rocket-league.com/content/media/items/avatar/220px/spiralis/spiralis-TitaniumWhite.png" }, // Add real URLs here
+                { color: "Crimson", img: "https://rocket-league.com/content/media/items/avatar/220px/spiralis/spiralis-Crimson.png" },
+                { color: "Sky Blue", img: "https://rocket-league.com/content/media/items/avatar/220px/spiralis/spiralis-SkyBlue.png" },
+				{ color: "Black", img: "https://rocket-league.com/content/media/items/avatar/220px/spiralis/spiralis-Black.png" },
+				{ color: "Grey", img: "https://rocket-league.com/content/media/items/avatar/220px/spiralis/spiralis-Grey.png" },
+				{ color: "Pink", img: "https://rocket-league.com/content/media/items/avatar/220px/spiralis/spiralis-Pink.png" },
+				{ color: "Cobalt", img: "https://rocket-league.com/content/media/items/avatar/220px/spiralis/spiralis-Cobalt.png" },
+				{ color: "Burnt Sienna", img: "https://rocket-league.com/content/media/items/avatar/220px/spiralis/spiralis-BurntSienna.png" },
+				{ color: "Saffron", img: "https://rocket-league.com/content/media/items/avatar/220px/spiralis/spiralis-Saffron.png" },
+				{ color: "Lime", img: "https://rocket-league.com/content/media/items/avatar/220px/spiralis/spiralis-Lime.png" },
+				{ color: "Forest Green", img: "https://rocket-league.com/content/media/items/avatar/220px/spiralis/spiralis-ForestGreen.png" },
+				{ color: "Orange", img: "https://rocket-league.com/content/media/items/avatar/220px/spiralis/spiralis-Orange.png" },
+				{ color: "Purple", img: "https://rocket-league.com/content/media/items/avatar/220px/spiralis/spiralis-Purple.png" }
+            ]
+        },
+		{ 
+            name: "Reaper", 
+            rarity: "very-rare", 
+            img: "https://rocket-league.com/content/media/items/avatar/220px/6d54c8f1171527626317.png",
+            variants: [
+                { color: "Titanium White", img: "https://rocket-league.com/content/media/items/avatar/220px/reaper/reaper-TitaniumWhite.png" }, // Add real URLs here
+                { color: "Crimson", img: "https://rocket-league.com/content/media/items/avatar/220px/reaper/reaper-Crimson.png" },
+                { color: "Sky Blue", img: "https://rocket-league.com/content/media/items/avatar/220px/reaper/reaper-SkyBlue.png" },
+				{ color: "Black", img: "https://rocket-league.com/content/media/items/avatar/220px/reaper/reaper-Black.png" },
+				{ color: "Grey", img: "https://rocket-league.com/content/media/items/avatar/220px/reaper/reaper-Grey.png" },
+				{ color: "Pink", img: "https://rocket-league.com/content/media/items/avatar/220px/reaper/reaper-Pink.png" },
+				{ color: "Cobalt", img: "https://rocket-league.com/content/media/items/avatar/220px/reaper/reaper-Cobalt.png" },
+				{ color: "Burnt Sienna", img: "https://rocket-league.com/content/media/items/avatar/220px/reaper/reaper-BurntSienna.png" },
+				{ color: "Saffron", img: "https://rocket-league.com/content/media/items/avatar/220px/reaper/reaper-Saffron.png" },
+				{ color: "Lime", img: "https://rocket-league.com/content/media/items/avatar/220px/reaper/reaper-Lime.png" },
+				{ color: "Forest Green", img: "https://rocket-league.com/content/media/items/avatar/220px/reaper/reaper-ForestGreen.png" },
+				{ color: "Orange", img: "https://rocket-league.com/content/media/items/avatar/220px/reaper/reaper-Orange.png" },
+				{ color: "Purple", img: "https://rocket-league.com/content/media/items/avatar/220px/reaper/reaper-Purple.png" }
+            ]
+        },
+		{ 
+            name: "Nipper", 
+            rarity: "very-rare", 
+            img: "https://rocket-league.com/content/media/items/avatar/220px/33106711da1518046043.png",
+            variants: [
+                { color: "Titanium White", img: "https://rocket-league.com/content/media/items/avatar/220px/nipper/nipper-TitaniumWhite.png" }, // Add real URLs here
+                { color: "Crimson", img: "https://rocket-league.com/content/media/items/avatar/220px/nipper/nipper-Crimson.png" },
+                { color: "Sky Blue", img: "https://rocket-league.com/content/media/items/avatar/220px/nipper/nipper-SkyBlue.png" },
+				{ color: "Black", img: "https://rocket-league.com/content/media/items/avatar/220px/nipper/nipper-Black.png" },
+				{ color: "Grey", img: "https://rocket-league.com/content/media/items/avatar/220px/nipper/nipper-Grey.png" },
+				{ color: "Pink", img: "https://rocket-league.com/content/media/items/avatar/220px/nipper/nipper-Pink.png" },
+				{ color: "Cobalt", img: "https://rocket-league.com/content/media/items/avatar/220px/nipper/nipper-Cobalt.png" },
+				{ color: "Burnt Sienna", img: "https://rocket-league.com/content/media/items/avatar/220px/nipper/nipper-BurntSienna.png" },
+				{ color: "Saffron", img: "https://rocket-league.com/content/media/items/avatar/220px/nipper/nipper-Saffron.png" },
+				{ color: "Lime", img: "https://rocket-league.com/content/media/items/avatar/220px/nipper/nipper-Lime.png" },
+				{ color: "Forest Green", img: "https://rocket-league.com/content/media/items/avatar/220px/nipper/nipper-ForestGreen.png" },
+				{ color: "Orange", img: "https://rocket-league.com/content/media/items/avatar/220px/nipper/nipper-Orange.png" },
+				{ color: "Purple", img: "https://rocket-league.com/content/media/items/avatar/220px/nipper/nipper-Purple.png" }
+            ]
+        },
+		{ 
+            name: "Furry", 
+            rarity: "import", 
+            img: "https://rocket-league.com/content/media/items/avatar/220px/f08c1b45121490221506.png",
+        },
+		{ 
+            name: "Distortion", 
+            rarity: "import", 
+            img: "https://rocket-league.com/content/media/items/avatar/220px/d7374716691474311319.png",
+        },
+		{ 
+            name: "Fennec", 
+            rarity: "import", 
+            img: "https://rocket-league.com/content/media/items/avatar/220px/59a07ffb751560084126.png",
+            variants: [
+                { color: "Titanium White", img: "https://rocket-league.com/content/media/items/avatar/220px/fennec/fennec-TitaniumWhite.png" }, // Add real URLs here
+                { color: "Crimson", img: "https://rocket-league.com/content/media/items/avatar/220px/fennec/fennec-Crimson.png" },
+                { color: "Sky Blue", img: "https://rocket-league.com/content/media/items/avatar/220px/fennec/fennec-SkyBlue.png" },
+				{ color: "Black", img: "https://rocket-league.com/content/media/items/avatar/220px/fennec/fennec-Black.png" },
+				{ color: "Grey", img: "https://rocket-league.com/content/media/items/avatar/220px/fennec/fennec-Grey.png" },
+				{ color: "Pink", img: "https://rocket-league.com/content/media/items/avatar/220px/fennec/fennec-Pink.png" },
+				{ color: "Cobalt", img: "https://rocket-league.com/content/media/items/avatar/220px/fennec/fennec-Cobalt.png" },
+				{ color: "Burnt Sienna", img: "https://rocket-league.com/content/media/items/avatar/220px/fennec/fennec-BurntSienna.png" },
+				{ color: "Saffron", img: "https://rocket-league.com/content/media/items/avatar/220px/fennec/fennec-Saffron.png" },
+				{ color: "Lime", img: "https://rocket-league.com/content/media/items/avatar/220px/fennec/fennec-Lime.png" },
+				{ color: "Forest Green", img: "https://rocket-league.com/content/media/items/avatar/220px/fennec/fennec-ForestGreen.png" },
+				{ color: "Orange", img: "https://rocket-league.com/content/media/items/avatar/220px/fennec/fennec-Orange.png" },
+				{ color: "Purple", img: "https://rocket-league.com/content/media/items/avatar/220px/fennec/fennec-Purple.png" }
+            ]
+        },
+		{ 
+            name: "Jäger 619", 
+            rarity: "import", 
+            img: "https://rocket-league.com/content/media/items/avatar/220px/d02e13ec9f1506786587.png",
+            variants: [
+                { color: "Titanium White", img: "https://rocket-league.com/content/media/items/avatar/220px/jäger619/jäger619-TitaniumWhite.png" }, // Add real URLs here
+                { color: "Crimson", img: "https://rocket-league.com/content/media/items/avatar/220px/jäger619/jäger619-Crimson.png" },
+                { color: "Sky Blue", img: "https://rocket-league.com/content/media/items/avatar/220px/jäger619/jäger619-SkyBlue.png" },
+				{ color: "Black", img: "https://rocket-league.com/content/media/items/avatar/220px/jäger619/jäger619-Black.png" },
+				{ color: "Grey", img: "https://rocket-league.com/content/media/items/avatar/220px/jäger619/jäger619-Grey.png" },
+				{ color: "Pink", img: "https://rocket-league.com/content/media/items/avatar/220px/jäger619/jäger619-Pink.png" },
+				{ color: "Cobalt", img: "https://rocket-league.com/content/media/items/avatar/220px/jäger619/jäger619-Cobalt.png" },
+				{ color: "Burnt Sienna", img: "https://rocket-league.com/content/media/items/avatar/220px/jäger619/jäger619-BurntSienna.png" },
+				{ color: "Saffron", img: "https://rocket-league.com/content/media/items/avatar/220px/jäger619/jäger619-Saffron.png" },
+				{ color: "Lime", img: "https://rocket-league.com/content/media/items/avatar/220px/jäger619/jäger619-Lime.png" },
+				{ color: "Forest Green", img: "https://rocket-league.com/content/media/items/avatar/220px/jäger619/jäger619-ForestGreen.png" },
+				{ color: "Orange", img: "https://rocket-league.com/content/media/items/avatar/220px/jäger619/jäger619-Orange.png" },
+				{ color: "Purple", img: "https://rocket-league.com/content/media/items/avatar/220px/jäger619/jäger619-Purple.png" }
+            ]
+        },
+		{ 
+            name: "Octane", 
+            rarity: "import", 
+            img: "https://rocket-league.com/content/media/items/avatar/220px/1d349731e61509568153.png",
+            variants: [
+                { color: "Titanium White", img: "https://rocket-league.com/content/media/items/avatar/220px/octane/octane-TitaniumWhite.png" }, // Add real URLs here
+                { color: "Crimson", img: "https://rocket-league.com/content/media/items/avatar/220px/octane/octane-Crimson.png" },
+                { color: "Sky Blue", img: "https://rocket-league.com/content/media/items/avatar/220px/octane/octane-SkyBlue.png" },
+				{ color: "Black", img: "https://rocket-league.com/content/media/items/avatar/220px/octane/octane-Black.png" },
+				{ color: "Grey", img: "https://rocket-league.com/content/media/items/avatar/220px/octane/octane-Grey.png" },
+				{ color: "Pink", img: "https://rocket-league.com/content/media/items/avatar/220px/octane/octane-Pink.png" },
+				{ color: "Cobalt", img: "https://rocket-league.com/content/media/items/avatar/220px/octane/octane-Cobalt.png" },
+				{ color: "Burnt Sienna", img: "https://rocket-league.com/content/media/items/avatar/220px/octane/octane-BurntSienna.png" },
+				{ color: "Saffron", img: "https://rocket-league.com/content/media/items/avatar/220px/octane/octane-Saffron.png" },
+				{ color: "Lime", img: "https://rocket-league.com/content/media/items/avatar/220px/octane/octane-Lime.png" },
+				{ color: "Forest Green", img: "https://rocket-league.com/content/media/items/avatar/220px/octane/octane-ForestGreen.png" },
+				{ color: "Orange", img: "https://rocket-league.com/content/media/items/avatar/220px/octane/octane-Orange.png" },
+				{ color: "Purple", img: "https://rocket-league.com/content/media/items/avatar/220px/octane/octane-Purple.png" }
+            ]
+        },
+		{ 
+            name: "Endo", 
+            rarity: "import", 
+            img: "https://rocket-league.com/content/media/items/avatar/220px/1f5724c5fb1490221547.png",
+            variants: [
+                { color: "Titanium White", img: "https://rocket-league.com/content/media/items/avatar/220px/endo/endo-TitaniumWhite.png" }, // Add real URLs here
+                { color: "Crimson", img: "https://rocket-league.com/content/media/items/avatar/220px/endo/endo-Crimson.png" },
+                { color: "Sky Blue", img: "https://rocket-league.com/content/media/items/avatar/220px/endo/endo-SkyBlue.png" },
+				{ color: "Black", img: "https://rocket-league.com/content/media/items/avatar/220px/endo/endo-Black.png" },
+				{ color: "Grey", img: "https://rocket-league.com/content/media/items/avatar/220px/endo/endo-Grey.png" },
+				{ color: "Pink", img: "https://rocket-league.com/content/media/items/avatar/220px/endo/endo-Pink.png" },
+				{ color: "Cobalt", img: "https://rocket-league.com/content/media/items/avatar/220px/endo/endo-Cobalt.png" },
+				{ color: "Burnt Sienna", img: "https://rocket-league.com/content/media/items/avatar/220px/endo/endo-BurntSienna.png" },
+				{ color: "Saffron", img: "https://rocket-league.com/content/media/items/avatar/220px/endo/endo-Saffron.png" },
+				{ color: "Lime", img: "https://rocket-league.com/content/media/items/avatar/220px/endo/endo-Lime.png" },
+				{ color: "Forest Green", img: "https://rocket-league.com/content/media/items/avatar/220px/endo/endo-ForestGreen.png" },
+				{ color: "Orange", img: "https://rocket-league.com/content/media/items/avatar/220px/endo/endo-Orange.png" },
+				{ color: "Purple", img: "https://rocket-league.com/content/media/items/avatar/220px/endo/endo-Purple.png" }
+            ]
+        },
+		{ 
+            name: "FSL", 
+            rarity: "import", 
+            img: "https://rocket-league.com/content/media/items/avatar/220px/e3449fd4601481306645.png",
+            variants: [
+                { color: "Titanium White", img: "https://rocket-league.com/content/media/items/avatar/220px/fsl/fsl-TitaniumWhite.png" }, // Add real URLs here
+                { color: "Crimson", img: "https://rocket-league.com/content/media/items/avatar/220px/fsl/fsl-Crimson.png" },
+                { color: "Sky Blue", img: "https://rocket-league.com/content/media/items/avatar/220px/fsl/fsl-SkyBlue.png" },
+				{ color: "Black", img: "https://rocket-league.com/content/media/items/avatar/220px/fsl/fsl-Black.png" },
+				{ color: "Grey", img: "https://rocket-league.com/content/media/items/avatar/220px/fsl/fsl-Grey.png" },
+				{ color: "Pink", img: "https://rocket-league.com/content/media/items/avatar/220px/fsl/fsl-Pink.png" },
+				{ color: "Cobalt", img: "https://rocket-league.com/content/media/items/avatar/220px/fsl/fsl-Cobalt.png" },
+				{ color: "Burnt Sienna", img: "https://rocket-league.com/content/media/items/avatar/220px/fsl/fsl-BurntSienna.png" },
+				{ color: "Saffron", img: "https://rocket-league.com/content/media/items/avatar/220px/fsl/fsl-Saffron.png" },
+				{ color: "Lime", img: "https://rocket-league.com/content/media/items/avatar/220px/fsl/fsl-Lime.png" },
+				{ color: "Forest Green", img: "https://rocket-league.com/content/media/items/avatar/220px/fsl/fsl-ForestGreen.png" },
+				{ color: "Orange", img: "https://rocket-league.com/content/media/items/avatar/220px/fsl/fsl-Orange.png" },
+				{ color: "Purple", img: "https://rocket-league.com/content/media/items/avatar/220px/fsl/fsl-Purple.png" }
+            ]
+        },
+		{ 
+            name: "Hiro", 
+            rarity: "import", 
+            img: "https://rocket-league.com/content/media/items/avatar/220px/93fd216aea1512417205.png",
+            variants: [
+                { color: "Titanium White", img: "https://rocket-league.com/content/media/items/avatar/220px/hiro/hiro-TitaniumWhite.png" }, // Add real URLs here
+                { color: "Crimson", img: "https://rocket-league.com/content/media/items/avatar/220px/hiro/hiro-Crimson.png" },
+                { color: "Sky Blue", img: "https://rocket-league.com/content/media/items/avatar/220px/hiro/hiro-SkyBlue.png" },
+				{ color: "Black", img: "https://rocket-league.com/content/media/items/avatar/220px/hiro/hiro-Black.png" },
+				{ color: "Grey", img: "https://rocket-league.com/content/media/items/avatar/220px/hiro/hiro-Grey.png" },
+				{ color: "Pink", img: "https://rocket-league.com/content/media/items/avatar/220px/hiro/hiro-Pink.png" },
+				{ color: "Cobalt", img: "https://rocket-league.com/content/media/items/avatar/220px/hiro/hiro-Cobalt.png" },
+				{ color: "Burnt Sienna", img: "https://rocket-league.com/content/media/items/avatar/220px/hiro/hiro-BurntSienna.png" },
+				{ color: "Saffron", img: "https://rocket-league.com/content/media/items/avatar/220px/hiro/hiro-Saffron.png" },
+				{ color: "Lime", img: "https://rocket-league.com/content/media/items/avatar/220px/hiro/hiro-Lime.png" },
+				{ color: "Forest Green", img: "https://rocket-league.com/content/media/items/avatar/220px/hiro/hiro-ForestGreen.png" },
+				{ color: "Orange", img: "https://rocket-league.com/content/media/items/avatar/220px/hiro/hiro-Orange.png" },
+				{ color: "Purple", img: "https://rocket-league.com/content/media/items/avatar/220px/hiro/hiro-Purple.png" }
+            ]
+        },
+		{ 
+            name: "Draco", 
+            rarity: "exotic", 
+            img: "https://rocket-league.com/content/media/items/avatar/220px/b3889bd6c91494864809.png",
+            variants: [
+                { color: "Titanium White", img: "https://rocket-league.com/content/media/items/avatar/220px/draco/draco-TitaniumWhite.png" }, // Add real URLs here
+                { color: "Crimson", img: "https://rocket-league.com/content/media/items/avatar/220px/draco/draco-Crimson.png" },
+                { color: "Sky Blue", img: "https://rocket-league.com/content/media/items/avatar/220px/draco/draco-SkyBlue.png" },
+				{ color: "Black", img: "https://rocket-league.com/content/media/items/avatar/220px/draco/draco-Black.png" },
+				{ color: "Grey", img: "https://rocket-league.com/content/media/items/avatar/220px/draco/draco-Grey.png" },
+				{ color: "Pink", img: "https://rocket-league.com/content/media/items/avatar/220px/draco/draco-Pink.png" },
+				{ color: "Cobalt", img: "https://rocket-league.com/content/media/items/avatar/220px/draco/draco-Cobalt.png" },
+				{ color: "Burnt Sienna", img: "https://rocket-league.com/content/media/items/avatar/220px/draco/draco-BurntSienna.png" },
+				{ color: "Saffron", img: "https://rocket-league.com/content/media/items/avatar/220px/draco/draco-Saffron.png" },
+				{ color: "Lime", img: "https://rocket-league.com/content/media/items/avatar/220px/draco/draco-Lime.png" },
+				{ color: "Forest Green", img: "https://rocket-league.com/content/media/items/avatar/220px/draco/draco-ForestGreen.png" },
+				{ color: "Orange", img: "https://rocket-league.com/content/media/items/avatar/220px/draco/draco-Orange.png" },
+				{ color: "Purple", img: "https://rocket-league.com/content/media/items/avatar/220px/draco/draco-Purple.png" }
+			]
+		},
+		{ 
+            name: "Pyrrhos", 
+            rarity: "exotic", 
+            img: "https://rocket-league.com/content/media/items/avatar/220px/42a71338bd1551122241.png",
+            variants: [
+                { color: "Titanium White", img: "https://rocket-league.com/content/media/items/avatar/220px/pyrrhos/pyrrhos-TitaniumWhite.png" }, // Add real URLs here
+                { color: "Crimson", img: "https://rocket-league.com/content/media/items/avatar/220px/pyrrhos/pyrrhos-Crimson.png" },
+                { color: "Sky Blue", img: "https://rocket-league.com/content/media/items/avatar/220px/pyrrhos/pyrrhos-SkyBlue.png" },
+				{ color: "Black", img: "https://rocket-league.com/content/media/items/avatar/220px/pyrrhos/pyrrhos-Black.png" },
+				{ color: "Grey", img: "https://rocket-league.com/content/media/items/avatar/220px/pyrrhos/pyrrhos-Grey.png" },
+				{ color: "Pink", img: "https://rocket-league.com/content/media/items/avatar/220px/pyrrhos/pyrrhos-Pink.png" },
+				{ color: "Cobalt", img: "https://rocket-league.com/content/media/items/avatar/220px/pyrrhos/pyrrhos-Cobalt.png" },
+				{ color: "Burnt Sienna", img: "https://rocket-league.com/content/media/items/avatar/220px/pyrrhos/pyrrhos-BurntSienna.png" },
+				{ color: "Saffron", img: "https://rocket-league.com/content/media/items/avatar/220px/pyrrhos/pyrrhos-Saffron.png" },
+				{ color: "Lime", img: "https://rocket-league.com/content/media/items/avatar/220px/pyrrhos/pyrrhos-Lime.png" },
+				{ color: "Forest Green", img: "https://rocket-league.com/content/media/items/avatar/220px/pyrrhos/pyrrhos-ForestGreen.png" },
+				{ color: "Purple", img: "https://rocket-league.com/content/media/items/avatar/220px/pyrrhos/pyrrhos-Purple.png" }
+			]
+		},
+		{ 
+            name: "Zomba", 
+            rarity: "exotic", 
+            img: "https://rocket-league.com/content/media/items/avatar/220px/a9b0c2535e1481307196.png",
+            variants: [
+                { color: "Titanium White", img: "https://rocket-league.com/content/media/items/avatar/220px/zomba/zomba-TitaniumWhite.png" }, // Add real URLs here
+                { color: "Crimson", img: "https://rocket-league.com/content/media/items/avatar/220px/zomba/zomba-Crimson.png" },
+                { color: "Sky Blue", img: "https://rocket-league.com/content/media/items/avatar/220px/zomba/zomba-SkyBlue.png" },
+				{ color: "Black", img: "https://rocket-league.com/content/media/items/avatar/220px/zomba/zomba-Black.png" },
+				{ color: "Grey", img: "https://rocket-league.com/content/media/items/avatar/220px/zomba/zomba-Grey.png" },
+				{ color: "Pink", img: "https://rocket-league.com/content/media/items/avatar/220px/zomba/zomba-Pink.png" },
+				{ color: "Cobalt", img: "https://rocket-league.com/content/media/items/avatar/220px/zomba/zomba-Cobalt.png" },
+				{ color: "Burnt Sienna", img: "https://rocket-league.com/content/media/items/avatar/220px/zomba/zomba-BurntSienna.png" },
+				{ color: "Saffron", img: "https://rocket-league.com/content/media/items/avatar/220px/zomba/zomba-Saffron.png" },
+				{ color: "Lime", img: "https://rocket-league.com/content/media/items/avatar/220px/zomba/zomba-Lime.png" },
+				{ color: "Forest Green", img: "https://rocket-league.com/content/media/items/avatar/220px/zomba/zomba-ForestGreen.png" },
+				{ color: "Orange", img: "https://rocket-league.com/content/media/items/avatar/220px/zomba/zomba-Orange.png" },
+				{ color: "Purple", img: "https://rocket-league.com/content/media/items/avatar/220px/zomba/zomba-Purple.png" }
+			]
+		},
+		{ 
+            name: "Kalos", 
+            rarity: "exotic", 
+            img: "https://rocket-league.com/content/media/items/avatar/220px/90aced509f1490222132.png",
+            variants: [
+                { color: "Titanium White", img: "https://rocket-league.com/content/media/items/avatar/220px/kalos/kalos-TitaniumWhite.png" }, // Add real URLs here
+                { color: "Crimson", img: "https://rocket-league.com/content/media/items/avatar/220px/kalos/kalos-Crimson.png" },
+                { color: "Sky Blue", img: "https://rocket-league.com/content/media/items/avatar/220px/kalos/kalos-SkyBlue.png" },
+				{ color: "Black", img: "https://rocket-league.com/content/media/items/avatar/220px/kalos/kalos-Black.png" },
+				{ color: "Grey", img: "https://rocket-league.com/content/media/items/avatar/220px/kalos/kalos-Grey.png" },
+				{ color: "Pink", img: "https://rocket-league.com/content/media/items/avatar/220px/kalos/kalos-Pink.png" },
+				{ color: "Cobalt", img: "https://rocket-league.com/content/media/items/avatar/220px/kalos/kalos-Cobalt.png" },
+				{ color: "Burnt Sienna", img: "https://rocket-league.com/content/media/items/avatar/220px/kalos/kalos-BurntSienna.png" },
+				{ color: "Saffron", img: "https://rocket-league.com/content/media/items/avatar/220px/kalos/kalos-Saffron.png" },
+				{ color: "Lime", img: "https://rocket-league.com/content/media/items/avatar/220px/kalos/kalos-Lime.png" },
+				{ color: "Forest Green", img: "https://rocket-league.com/content/media/items/avatar/220px/kalos/kalos-ForestGreen.png" },
+				{ color: "Orange", img: "https://rocket-league.com/content/media/items/avatar/220px/kalos/kalos-Orange.png" },
+				{ color: "Purple", img: "https://rocket-league.com/content/media/items/avatar/220px/kalos/kalos-Purple.png" }
+			]
+		},
+		{ 
+            name: "Voltaic", 
+            rarity: "exotic", 
+            img: "https://rocket-league.com/content/media/items/avatar/220px/7c534577c91473421257.png",
+            variants: [
+                { color: "Titanium White", img: "https://rocket-league.com/content/media/items/avatar/220px/voltaic/voltaic-TitaniumWhite.png" }, // Add real URLs here
+                { color: "Crimson", img: "https://rocket-league.com/content/media/items/avatar/220px/voltaic/voltaic-Crimson.png" },
+                { color: "Sky Blue", img: "https://rocket-league.com/content/media/items/avatar/220px/voltaic/voltaic-SkyBlue.png" },
+				{ color: "Black", img: "https://rocket-league.com/content/media/items/avatar/220px/voltaic/voltaic-Black.png" },
+				{ color: "Grey", img: "https://rocket-league.com/content/media/items/avatar/220px/voltaic/voltaic-Grey.png" },
+				{ color: "Pink", img: "https://rocket-league.com/content/media/items/avatar/220px/voltaic/voltaic-Pink.png" },
+				{ color: "Cobalt", img: "https://rocket-league.com/content/media/items/avatar/220px/voltaic/voltaic-Cobalt.png" },
+				{ color: "Burnt Sienna", img: "https://rocket-league.com/content/media/items/avatar/220px/voltaic/voltaic-BurntSienna.png" },
+				{ color: "Saffron", img: "https://rocket-league.com/content/media/items/avatar/220px/voltaic/voltaic-Saffron.png" },
+				{ color: "Lime", img: "https://rocket-league.com/content/media/items/avatar/220px/voltaic/voltaic-Lime.png" },
+				{ color: "Forest Green", img: "https://rocket-league.com/content/media/items/avatar/220px/voltaic/voltaic-ForestGreen.png" },
+				{ color: "Orange", img: "https://rocket-league.com/content/media/items/avatar/220px/voltaic/voltaic-Orange.png" },
+				{ color: "Purple", img: "https://rocket-league.com/content/media/items/avatar/220px/voltaic/voltaic-Purple.png" }
+			]
+		},
+		{ 
+            name: "Mainframe", 
+            rarity: "black-market", 
+            img: "https://rocket-league.com/content/media/items/avatar/220px/21a5cc6f351532980329.png",
+            variants: [
+                { color: "Titanium White", img: "https://rocket-league.com/content/media/items/avatar/220px/21a5cc6f351532980329.png" }, // Add real URLs here
+                { color: "Crimson", img: "https://rocket-league.com/content/media/items/avatar/220px/21a5cc6f351532980329.png" },
+                { color: "Sky Blue", img: "https://rocket-league.com/content/media/items/avatar/220px/21a5cc6f351532980329.png" },
+				{ color: "Black", img: "https://rocket-league.com/content/media/items/avatar/220px/21a5cc6f351532980329.png" },
+				{ color: "Grey", img: "https://rocket-league.com/content/media/items/avatar/220px/21a5cc6f351532980329.png" },
+				{ color: "Pink", img: "https://rocket-league.com/content/media/items/avatar/220px/21a5cc6f351532980329.png" },
+				{ color: "Cobalt", img: "https://rocket-league.com/content/media/items/avatar/220px/21a5cc6f351532980329.png" },
+				{ color: "Burnt Sienna", img: "https://rocket-league.com/content/media/items/avatar/220px/21a5cc6f351532980329.png" },
+				{ color: "Saffron", img: "https://rocket-league.com/content/media/items/avatar/220px/21a5cc6f351532980329.png" },
+				{ color: "Lime", img: "https://rocket-league.com/content/media/items/avatar/220px/21a5cc6f351532980329.png" },
+				{ color: "Forest Green", img: "https://rocket-league.com/content/media/items/avatar/220px/21a5cc6f351532980329.png" },
+				{ color: "Orange", img: "https://rocket-league.com/content/media/items/avatar/220px/21a5cc6f351532980329.png" },
+				{ color: "Purple", img: "https://rocket-league.com/content/media/items/avatar/220px/21a5cc6f351532980329.png" }
+            ]
+		},
+		{ 
+            name: "Dueling Dragons", 
+            rarity: "black-market", 
+            img: "https://rocket-league.com/content/media/items/avatar/220px/b50e027ce81512417574.png",
+            variants: [
+                { color: "Titanium White", img: "https://rocket-league.com/content/media/items/avatar/220px/b50e027ce81512417574.png" }, // Add real URLs here
+				{ color: "Black", img: "https://rocket-league.com/content/media/items/avatar/220px/b50e027ce81512417574.png" },
+            ]
+		},
+		{ 
+            name: "Party Time", 
+            rarity: "black-market", 
+            img: "https://rocket-league.com/content/media/items/avatar/220px/4c9d399f811506784704.png",
+		}
+	]
+
+    const paintColors = {
+        "Titanium White": "#FFFFFF",
+		"Crimson": "#FF0000",
+		"Sky Blue": "#00CCFF",
+		"Black": "#080808",
+		"Grey": "#A1A1A1",
+        "Pink": "#FF66F8",
+		"Cobalt": "#1E44FC",
+		"Burnt Sienna": "#7D3F14",
+		"Saffron": "#D9D400",
+		"Lime": "#94D900",
+        "Forest Green": "#0DCC00",
+		"Orange": "#ED9E00",
+		"Purple": "#9E00ED"
+    };
+
+    const chances = { "rare": 55, "very-rare": 28, "import": 12, "exotic": 4, "black-market": 1 };
+    let inventory = [];
+    const ITEM_WIDTH = 140; 
+    const WIN_INDEX = 35;
+    let pendingItem = null;
+
+    const tickSound = new Audio('https://files.catbox.moe/s55ymb.mp3');
+    tickSound.volume = 0.5;
+	
+	const revealSound = new Audio('https://files.catbox.moe/jopg14.mp3');
+	revealSound.volume = 0.1;
+
+    function playTick() {
+        tickSound.currentTime = 0;
+        tickSound.play().catch(() => {});
+    }
+
+function getRandomItem() {
+    const roll = Math.random() * 100;
+    let accumulated = 0;
+    let selectedItem = null;
+    for (let rarity in chances) {
+        accumulated += chances[rarity];
+        if (roll <= accumulated) {
+            const itemsInRarity = loot.filter(i => i.rarity === rarity);
+            const baseItem = itemsInRarity.length > 0 ? itemsInRarity[Math.floor(Math.random() * itemsInRarity.length)] : loot[0];
+            selectedItem = {...baseItem};
+            break;
+        }
+    }
+    if (selectedItem && selectedItem.variants && Math.random() < 0.25) {
+        const variant = selectedItem.variants[Math.floor(Math.random() * selectedItem.variants.length)];
+        selectedItem.name = `${variant.color} ${selectedItem.name}`;
+        
+        // ADD THIS LINE TO FIX THE IMAGE
+        selectedItem.img = variant.img; 
+        
+        selectedItem.isPainted = true;
+        selectedItem.paintHex = paintColors[variant.color] || "#FFFFFF"; 
+    }
+    return selectedItem || loot[0];
+}
+
+    function spin() {
+        const btn = document.getElementById('spinBtn');
+        const reel = document.getElementById('reel');
+        btn.disabled = true;
+        reel.style.transition = 'none';
+        reel.style.transform = 'translateX(0)';
+        reel.innerHTML = '';
+        
+        const sessionItems = [];
+        for(let i=0; i<50; i++) {
+            const item = getRandomItem(); 
+            sessionItems.push(item);
+            const div = document.createElement('div');
+            div.className = `item ${item.rarity}`;
+            div.innerHTML = `<img src="${rarityIcons[item.rarity]}" style="opacity: 0.7;">`; 
+            reel.appendChild(div);
+        }
+
+        const containerWidth = 700;
+        const landingPosition = (WIN_INDEX * ITEM_WIDTH) - (containerWidth/2) + (ITEM_WIDTH/2);
+
+        setTimeout(() => {
+            reel.style.transition = 'transform 5s cubic-bezier(0.45, 0.05, 0.55, 0.95)';
+            reel.style.transform = `translateX(-${landingPosition}px)`;
+            
+            let lastTickIndex = 0;
+            const startTime = performance.now();
+            const duration = 5000;
+
+            function checkTick(now) {
+                const elapsed = now - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const easeInOut = progress < 0.5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+                const currentX = easeInOut * landingPosition;
+                const currentTickIndex = Math.floor((currentX + (containerWidth/2)) / ITEM_WIDTH);
+
+                if (currentTickIndex > lastTickIndex) {
+                    playTick();
+                    lastTickIndex = currentTickIndex;
+                }
+                if (progress < 1) requestAnimationFrame(checkTick);
+            }
+            requestAnimationFrame(checkTick);
+            
+            setTimeout(() => {
+                pendingItem = sessionItems[WIN_INDEX];
+                showReveal(pendingItem, false); 
+                btn.disabled = false;
+            }, 5100);
+        }, 50);
+    }
+
+function showReveal(item, isInventory = false, index = null) {
+    const screen = document.getElementById('reveal-screen');
+    const card = document.getElementById('reveal-card');
+    const actions = document.getElementById('reveal-actions');
+
+    if (!isInventory) {
+        revealSound.currentTime = 0;
+        revealSound.play().catch(() => {});
+
+		// Fire Pink Confetti if it's a Black Market item
+		if (item.rarity === 'black-market') {
+			confetti({
+				particleCount: 300,
+				spread: 120,
+				origin: { y: 0.7 },
+				colors: ['#ff00ff', '#ff66ff', '#ff99ff', '#ffffff'],
+				zIndex: 2000 // <--- ADD THIS LINE (Higher than 1000)
+			});
+		}
+    }
+
+    // This part was accidentally moved outside the function!
+    card.className = `item ${item.rarity} ${item.isPainted ? 'painted-outline' : ''}`;
+    card.style.setProperty('--paint-color', item.paintHex || '');
+
+    card.innerHTML = `
+        <img src="${item.img}" style="width:150px; height:150px; z-index:1;">
+        <span style="font-size:20px; z-index:3; color: white; font-family: 'Arial Black', sans-serif;">${item.name}</span>
+        <div style="text-transform:uppercase; margin-top:5px; font-size:12px; z-index:3; color: #aaa; font-family: 'Segoe UI', sans-serif; letter-spacing: 1px;">${item.rarity}</div>
+    `;
+
+    actions.innerHTML = isInventory 
+        ? `<button onclick="closeReveal()" style="background: #555;">CLOSE</button><button onclick="removeFromInventory(${index})" style="background: #dc3545;">DISCARD</button>`
+        : `<button onclick="confirmCollect()" style="background: #28a745;">COLLECT</button><button onclick="confirmDiscard()" style="background: #dc3545;">DISCARD</button>`;
+    
+    screen.style.display = 'flex';
+} // Ensure this closing bracket is here
+
+    function showRevealFromInventory(index) { showReveal(inventory[index], true, index); }
+    function removeFromInventory(index) { inventory.splice(index, 1); updateInventoryUI(); closeReveal(); }
+    function confirmCollect() { if (pendingItem) { inventory.unshift(pendingItem); updateInventoryUI(); } closeReveal(); }
+    function confirmDiscard() { pendingItem = null; closeReveal(); }
+
+    function updateInventoryUI() {
+        const invDiv = document.getElementById('inventory');
+        document.getElementById('inv-header').innerText = `Inventory (${inventory.length} Items)`;
+        invDiv.innerHTML = inventory.map((i, index) => `
+            <div class="inv-slot ${i.rarity} ${i.isPainted ? 'painted-outline' : ''}" 
+                 onclick="showRevealFromInventory(${index})" 
+                 style="cursor: pointer; ${i.isPainted ? `--paint-color: ${i.paintHex}` : ''}">
+                <img src="${i.img}">
+            </div>
+        `).join('');
+    }
+
+    function closeReveal() { document.getElementById('reveal-screen').style.display = 'none'; pendingItem = null; }
+</script>
+</body>
+</html>
